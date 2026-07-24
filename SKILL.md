@@ -1,15 +1,13 @@
 ---
-name: china-weather-data
-display_name: 中国气象数据查询
-version: 0.1.0
-author: ruiduobao
-license: MIT-0
-description: |
-  Query China meteorological station data from data.cma.cn (authenticated) or
+description: 'Query China meteorological station data from data.cma.cn (authenticated)
+  or
+
   Open-Meteo (free fallback). Supports temperature, precipitation, wind, pressure,
+
   humidity, and sunshine data. Outputs CSV or JSON.
-runtime: python>=3.8
-tags: [gis, weather, climate, china, meteorology, cli]
+
+  '
+name: china-weather-data
 ---
 
 # China Weather Data
@@ -31,19 +29,19 @@ Query and download China meteorological station data. Supports two data sources:
 
 ```bash
 # Query by city (uses Open-Meteo)
-python scripts/china-weather-data.py query --city Beijing --start 2020-01-01 --end 2020-01-31
+python scripts\china-weather-data.py query --city Beijing --start 2020-01-01 --end 2020-01-31
 
 # Query by coordinates
-python scripts/china-weather-data.py query --lat 39.9042 --lon 116.4074 --start 2020-01-01 --end 2020-12-31 --type temperature
+python scripts\china-weather-data.py query --lat 39.9042 --lon 116.4074 --start 2020-01-01 --end 2020-12-31 --type temperature
 
 # Download to CSV
-python scripts/china-weather-data.py download --city Shanghai --start 2020-06-01 --end 2020-08-31 --output shanghai_summer.csv
+python scripts\china-weather-data.py download --city Shanghai --start 2020-06-01 --end 2020-08-31 --output shanghai_summer.csv
 
 # List stations
-python scripts/china-weather-data.py list-stations --province Guangdong
+python scripts\china-weather-data.py list-stations --province Guangdong
 
 # Configure API key for data.cma.cn
-python scripts/china-weather-data.py configure --key YOUR_API_KEY
+python scripts\china-weather-data.py configure --key YOUR_API_KEY
 ```
 
 ## Installation
@@ -90,7 +88,7 @@ pip install requests>=2.28.0 tqdm
 1. Register at [data.cma.cn](http://data.cma.cn/) (free, requires Chinese phone number)
 2. Log in → User Center → API Management
 3. Apply for API access (usually approved within 1-2 business days)
-4. Copy the API key and run: `python scripts/china-weather-data.py configure --key YOUR_KEY`
+4. Copy the API key and run: `python scripts\china-weather-data.py configure --key YOUR_KEY`
 
 ### Temporal Resolution
 
@@ -190,7 +188,7 @@ date,temperature,precipitation,wind_speed,pressure,humidity
 ```bash
 # Query multiple cities from a list
 for city in "北京" "上海" "广州" "成都"; do
-  python scripts/china_weather_data.py download     --city "$city" --type temperature     --start 2023-01-01 --end 2023-12-31     --output weather_${city}_2023.csv
+  python scripts\china-weather-data.py download     --city "$city" --type temperature     --start 2023-01-01 --end 2023-12-31     --output weather_${city}_2023.csv
   sleep 1
 done
 ```
@@ -214,7 +212,7 @@ jobs:
       - env:
           CMA_API_KEY: ${{ secrets.CMA_API_KEY }}
         run: |
-          python scripts/china_weather_data.py download \
+          python scripts\china-weather-data.py download \
             --city 北京 --type temperature \
             --start $(date -d '7 days ago' +%Y-%m-%d) \
             --end $(date +%Y-%m-%d) \
@@ -223,7 +221,7 @@ jobs:
 
 ### PostgreSQL/PostGIS Import
 ```bash
-python scripts/china_weather_data.py download   --city 北京 --type temperature   --start 2023-01-01 --end 2023-12-31   --output weather.csv
+python scripts\china-weather-data.py download   --city 北京 --type temperature   --start 2023-01-01 --end 2023-12-31   --output weather.csv
 
 psql -d gis_db -c "\COPY weather(city, date, temperature) FROM 'weather.csv' CSV HEADER"
 ```
@@ -254,19 +252,19 @@ psql -d gis_db -c "\COPY weather(city, date, temperature) FROM 'weather.csv' CSV
 
 ```bash
 # 按城市查询（使用 Open-Meteo）
-python scripts/china-weather-data.py query --city Beijing --start 2020-01-01 --end 2020-01-31
+python scripts\china-weather-data.py query --city Beijing --start 2020-01-01 --end 2020-01-31
 
 # 按坐标查询
-python scripts/china-weather-data.py query --lat 39.9042 --lon 116.4074 --start 2020-01-01 --end 2020-12-31 --type temperature
+python scripts\china-weather-data.py query --lat 39.9042 --lon 116.4074 --start 2020-01-01 --end 2020-12-31 --type temperature
 
 # 下载到 CSV
-python scripts/china-weather-data.py download --city Shanghai --start 2020-06-01 --end 2020-08-31 --output shanghai_summer.csv
+python scripts\china-weather-data.py download --city Shanghai --start 2020-06-01 --end 2020-08-31 --output shanghai_summer.csv
 
 # 列出站点
-python scripts/china-weather-data.py list-stations --province Guangdong
+python scripts\china-weather-data.py list-stations --province Guangdong
 
 # 配置 data.cma.cn API 密钥
-python scripts/china-weather-data.py configure --key YOUR_API_KEY
+python scripts\china-weather-data.py configure --key YOUR_API_KEY
 ```
 
 ### 数据来源
@@ -280,7 +278,7 @@ python scripts/china-weather-data.py configure --key YOUR_API_KEY
 1. 在 [data.cma.cn](http://data.cma.cn/) 注册（免费，需要中国手机号）
 2. 登录 → 用户中心 → API 管理
 3. 申请 API 访问权限（通常 1-2 个工作日批准）
-4. 复制 API 密钥并运行: `python scripts/china-weather-data.py configure --key YOUR_KEY`
+4. 复制 API 密钥并运行: `python scripts\china-weather-data.py configure --key YOUR_KEY`
 
 ### 时间分辨率
 
