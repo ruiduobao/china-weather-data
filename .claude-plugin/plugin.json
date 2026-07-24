@@ -1,0 +1,9 @@
+{
+  "name": "china-weather-data",
+  "description": "GIS skill for china-weather-data",
+  "version": "0.1.0",
+  "author": "ruiduobao",
+  "skills": [
+    "china-weather-data"
+  ]
+}
