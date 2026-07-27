@@ -1,13 +1,6 @@
 ---
-description: 'Query China meteorological station data from data.cma.cn (authenticated)
-  or
-
-  Open-Meteo (free fallback). Supports temperature, precipitation, wind, pressure,
-
-  humidity, and sunshine data. Outputs CSV or JSON.
-
-  '
 name: china-weather-data
+description: 'Query China meteorological station data from data.cma.cn (authenticated) description: 'Query China meteorological station data from data.cma.cn (authenticated) or  Open-Meteo (free fallback). Supports temperature, precipitation, wind, pressure,  humidity, and sunshine data. Outputs CSV or JSON.  '
 ---
 
 # China Weather Data
@@ -24,6 +17,18 @@ Query and download China meteorological station data. Supports two data sources:
 - List meteorological stations by province
 - Automatic fallback to Open-Meteo if data.cma.cn is unavailable
 - CSV and JSON output
+
+## Credentials
+
+This skill needs a **data.cma.cn API key** for the official 中国气象数据网
+endpoint. Open-Meteo fallback does **not** require a key.
+
+Resolution order:
+
+1. --key KEY CLI flag or CMA_API_KEY env var
+2. **Default** (geoskill-core credentials.py): empty — user must register
+
+Register at http://data.cma.cn/ (free, Chinese phone number required).
 
 ## Usage
 
