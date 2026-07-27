@@ -22,6 +22,7 @@ import json
 import sys
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 try:
@@ -38,6 +39,42 @@ except ImportError:
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".china-weather")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 TIMEOUT = 30
+
+__version__ = "0.1.0"
+USER_AGENT = f"china-weather-data/{__version__}"
+
+
+def write_qa_summary(qa_path, *, skill, command, args, payload, extra=None):
+    """Write a JSON run-summary sidecar to qa_path (Phase 5 optimization).
+
+    The sidecar includes the request params (place/city, date range, type),
+    the resolved lat/lon, the output path and a UTC timestamp so QA can
+    match a run to its inputs.
+    """
+    from datetime import datetime as _dt, timezone as _tz
+
+    summary = dict(payload) if isinstance(payload, dict) else {"result": payload}
+    summary.setdefault("skill", skill)
+    summary["command"] = command
+    summary["version"] = __version__
+    summary["user_agent"] = USER_AGENT
+    summary["timestamp"] = _dt.now(_tz.utc).isoformat()
+    # Echo input args (so QA can match a run to its inputs without re-parsing).
+    for flag in ("city", "station", "lat", "lon", "start", "end", "type",
+                 "output", "json", "place", "buffer_deg", "province"):
+        if hasattr(args, flag):
+            val = getattr(args, flag)
+            if isinstance(val, (str, int, float, bool, type(None))):
+                summary.setdefault(flag, val)
+    if extra:
+        for k, v in extra.items():
+            summary.setdefault(k, v)
+    qa_p = Path(qa_path)
+    qa_p.parent.mkdir(parents=True, exist_ok=True)
+    with open(qa_p, "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+    return qa_p
+
 
 # Open-Meteo variable mapping
 VARIABLE_MAP = {
@@ -122,8 +159,24 @@ def resolve_coordinates(city: Optional[str], lat: Optional[float], lon: Optional
         city_lower = city.lower().strip()
         if city_lower in CITY_COORDS:
             return CITY_COORDS[city_lower]
-        print(f"ERROR: Unknown city '{city}'. Use --lat/--lon directly or choose from: {', '.join(sorted(CITY_COORDS.keys())[:10])}...", file=sys.stderr)
-        return None
+        # Fallback: try Open-Meteo geocoding for any place name (Chinese or English)
+        try:
+            from _place import resolve_place as _resolve_place
+            place_info = _resolve_place(city, allow_nominatim=False)
+            print(
+                f"[china-weather-data] resolved '{city}' to "
+                f"{place_info.get('display_name')} via {place_info.get('source')}",
+                file=sys.stderr,
+            )
+            return (place_info["lat"], place_info["lon"])
+        except Exception as e:
+            print(
+                f"ERROR: Unknown city '{city}' (geocoding fallback failed: {e}). "
+                f"Use --lat/--lon directly or choose from: "
+                f"{', '.join(sorted(CITY_COORDS.keys())[:10])}...",
+                file=sys.stderr,
+            )
+            return None
     return None
 
 
@@ -254,6 +307,22 @@ def cmd_download(args: argparse.Namespace) -> int:
         writer.writeheader()
         writer.writerows(records)
     print(f"Wrote {len(records)} records to {output_path}")
+
+    # Phase 5: --qa sidecar summary
+    if getattr(args, "qa", None):
+        write_qa_summary(
+            args.qa, skill="china-weather-data", command="download",
+            args=args,
+            payload={
+                "n_records": len(records),
+                "output_path": str(Path(output_path).resolve()),
+                "size_bytes": Path(output_path).stat().st_size,
+                "lat": lat,
+                "lon": lon,
+                "date_range": [args.start, args.end],
+            },
+        )
+        print(f"QA: {args.qa}")
     return 0
 
 
@@ -280,6 +349,34 @@ def cmd_list_stations(args: argparse.Namespace) -> int:
 
     if args.province:
         stations = [s for s in stations if args.province in s["province"]]
+
+    if getattr(args, "place", None):
+        # Resolve --place to bbox and filter stations within bbox
+        import os as _os, sys as _sys
+        _shared = _os.path.join(
+            _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))),
+            "_shared", "place_resolver.py",
+        )
+        if _os.path.isfile(_shared):
+            _sys.path.insert(0, _os.path.dirname(_shared))
+            import place_resolver  # type: ignore
+            try:
+                pi = place_resolver.resolve_place(
+                    args.place, buffer_deg=args.buffer_deg,
+                    allow_nominatim=not args.no_nominatim,
+                )
+                lon, lat = pi["lon"], pi["lat"]
+                buf = args.buffer_deg
+                bbox = [lon - buf, lat - buf, lon + buf, lat + buf]
+                stations = [s for s in stations
+                            if bbox[0] <= s["lon"] <= bbox[2] and bbox[1] <= s["lat"] <= bbox[3]]
+                print(f"[place] {args.place} -> ({lat:.4f}, {lon:.4f}), {len(stations)} station(s) in bbox",
+                      file=sys.stderr)
+            except Exception as e:
+                print(f"WARN: --place resolution failed ({e}); returning all stations",
+                      file=sys.stderr)
+        else:
+            print(f"WARN: place_resolver not found at {_shared}", file=sys.stderr)
 
     if args.json:
         print(json.dumps(stations, indent=2, ensure_ascii=False))
@@ -334,10 +431,17 @@ def main() -> int:
                             choices=["temperature", "precipitation", "wind", "pressure", "humidity", "sunshine"],
                             help="Data type")
     p_download.add_argument("--output", required=True, help="Output CSV file path")
+    p_download.add_argument("--qa", metavar="PATH", default=None,
+                            help="Write a JSON run-summary sidecar to PATH (Phase 5).")
 
     # list-stations
     p_list = subparsers.add_parser("list-stations", help="List meteorological stations")
     p_list.add_argument("--province", help="Filter by province")
+    p_list.add_argument("--place", help="Filter by place name (Chinese or English) → bbox")
+    p_list.add_argument("--no-nominatim", action="store_true",
+                       help="Skip Nominatim in --place resolution")
+    p_list.add_argument("--buffer-deg", type=float, default=0.6,
+                       help="Buffer around resolved point (default 0.6° for city)")
     p_list.add_argument("--json", action="store_true", help="Output as JSON")
 
     # configure

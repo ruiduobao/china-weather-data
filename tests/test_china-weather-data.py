@@ -37,8 +37,15 @@ class TestResolveCoordinates(unittest.TestCase):
         self.assertEqual(result, (40.0, 117.0))
 
     def test_unknown_city(self):
-        result = cwd.resolve_coordinates("Atlantis", None, None)
-        self.assertIsNone(result)
+        # Patch Open-Meteo to return empty so the fallback does not rescue us
+        from unittest.mock import patch
+        with patch("requests.get") as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = {"results": []}
+            mock_resp.raise_for_status = MagicMock()
+            mock_get.return_value = mock_resp
+            result = cwd.resolve_coordinates("Atlantis", None, None)
+            self.assertIsNone(result)
 
 
 class TestQueryOpenMeteo(unittest.TestCase):
