@@ -1,6 +1,6 @@
 ---
 name: china-weather-data
-description: 'Query China meteorological station data from data.cma.cn (authenticated) description: 'Query China meteorological station data from data.cma.cn (authenticated) or  Open-Meteo (free fallback). Supports temperature, precipitation, wind, pressure,  humidity, and sunshine data. Outputs CSV or JSON.  '
+description: 'Query China meteorological station data from data.cma.cn (authenticated) or  Open-Meteo (free fallback). Supports temperature, precipitation, wind, pressure,  humidity, and sunshine data. Outputs CSV or JSON.  '
 ---
 
 # China Weather Data
